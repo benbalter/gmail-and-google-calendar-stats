@@ -51,7 +51,7 @@ class event {
 
   // Returns true if the current user is the event host
   isHost(): boolean {
-    return this.data?.organizer?.email === EMAIl;
+    return this.data?.organizer?.email === EMAIL;
   }
 
   // Returns true if the event is a one-on-one
