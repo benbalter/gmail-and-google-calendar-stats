@@ -354,7 +354,7 @@ async function getThreadsPage(gmail, q, pageToken = null) {
     q,
     maxResults: 500,
     includeSpamTrash: false,
-    pageToken: pageToken,
+    pageToken,
   });
   console.log(`Got ${res.data.threads?.length} threads`);
   return res;
@@ -451,7 +451,7 @@ async function buildEmailStats(client) {
 async function run() {
   const client = await authorize();
 
-  // await buildEventStats(client);
+  await buildEventStats(client);
   await buildEmailStats(client);
 }
 
