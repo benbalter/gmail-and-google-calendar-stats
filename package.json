@@ -5,6 +5,7 @@
     "@typescript-eslint/eslint-plugin": "^5.35.1",
     "@typescript-eslint/parser": "^5.35.1",
     "csv-stringify": "^6.3.0",
+    "email-addresses": "^5.0.0",
     "eslint": "^8.22.0",
     "eslint-plugin-github": "^4.3.7",
     "googleapis": "^105.0.0",

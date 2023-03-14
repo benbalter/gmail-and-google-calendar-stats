@@ -9,7 +9,8 @@
   },
   "rules": {
     "i18n-text/no-en": "off",
-    "camelcase": "warn"
+    "camelcase": "warn",
+    "no-console": "off"
   },
   "env": {
     "node": true,
