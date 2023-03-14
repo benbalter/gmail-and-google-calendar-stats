@@ -4,7 +4,6 @@ import process from "process";
 import { authenticate } from "@google-cloud/local-auth";
 import { google, calendar_v3, gmail_v1 } from "googleapis";
 import { stringify } from "csv-stringify";
-import { urlToHttpOptions } from "url";
 import addrs from "email-addresses";
 
 const SCOPES = [
