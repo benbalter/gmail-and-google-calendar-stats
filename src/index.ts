@@ -250,6 +250,8 @@ class message {
     });
   }
 
+  // The search query returns a thread if *any* message in the thread matches the query.
+  // We only want threads in which *all* messages match the query.
   shouldInclude() {
     return this.isInternal() && !this.excludedFrom() && !this.excludedTo();
   }
@@ -346,6 +348,7 @@ async function getEvents(auth, year: number) {
   return items.map((item) => new event(item));
 }
 
+// Get a single page of threads
 async function getThreadsPage(gmail, q, pageToken = null) {
   console.log("Getting page", pageToken);
   const res = await gmail.users.threads.list({
@@ -359,6 +362,7 @@ async function getThreadsPage(gmail, q, pageToken = null) {
   return res;
 }
 
+// Get all threads for the given year
 async function getThreads(auth, year: number) {
   const gmail = google.gmail({ version: "v1", auth });
   const fromFilter = EXCLUDE_FROM.map((email) => `-"from:${email}"`).join(" ");
@@ -386,6 +390,7 @@ async function getThreads(auth, year: number) {
   return threads.map((t) => new thread(t, gmail));
 }
 
+// Get all events and write to CSV
 async function buildEventStats(client) {
   let events: event[] = [];
 
@@ -414,16 +419,20 @@ async function buildEventStats(client) {
   );
 }
 
+// Get all emails and write to CSV
 async function buildEmailStats(client) {
   let threads: thread[] = [];
 
+  // Get threads for each year
   for (const year of YEARS) {
-    console.log("Getting emails for", year);
+    console.log("Getting threads for", year);
     const yearThreads = await getThreads(client, year);
     if (!yearThreads) {
       continue;
     }
 
+    // Threads.list doesn't return messages, so we need to do retrieve them for each thread
+    // This can probably be written with a Promise.all to parallelize
     for (const t of yearThreads) {
       const messages = await t.getMessages();
       if (messages && messages.every((m) => m.shouldInclude())) {
@@ -449,7 +458,6 @@ async function buildEmailStats(client) {
 // The main event
 async function run() {
   const client = await authorize();
-
   await buildEventStats(client);
   await buildEmailStats(client);
 }
