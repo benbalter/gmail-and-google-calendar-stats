@@ -155,7 +155,7 @@ class thread {
   async getMessages(): Promise<message[] | undefined> {
     if (this.messages) return this.messages;
 
-    console.log(`Getting messages for thread ${this.data.id}`);
+    console.log("Getting messages for thread", this.data.id);
     const res = await this.client.users.threads.get({
       userId: "me",
       id: this.data.id || "",
@@ -229,7 +229,7 @@ class message {
       return false;
     }
 
-    return from.address.replace(".", "") === EMAIL;
+    return from.address === EMAIL || from.address.replace(".", "") === EMAIL;
   }
 
   isInternal() {
@@ -256,10 +256,11 @@ class message {
   }
 
   toRow() {
+    const date = new Date(Number(this.data.internalDate));
     return {
-      date: Date.parse(String(this.data.internalDate)).toString(),
-      year: new Date(Number(this.data.internalDate)).getFullYear(),
-      month: new Date(Number(this.data.internalDate)).getMonth() + 1,
+      date: date.toDateString(),
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
       subject: this.subject(),
       from: this.from()?.address,
       to: this.to()
@@ -346,6 +347,19 @@ async function getEvents(auth, year: number) {
   return items.map((item) => new event(item));
 }
 
+async function getThreadsPage(gmail, q, pageToken = null) {
+  console.log("Getting page", pageToken);
+  const res = await gmail.users.threads.list({
+    userId: "me",
+    q,
+    maxResults: 500,
+    includeSpamTrash: false,
+    pageToken: pageToken,
+  });
+  console.log(`Got ${res.data.threads?.length} threads`);
+  return res;
+}
+
 async function getThreads(auth, year: number) {
   const gmail = google.gmail({ version: "v1", auth });
   const fromFilter = EXCLUDE_FROM.map((email) => `-"from:${email}"`).join(" ");
@@ -355,21 +369,21 @@ async function getThreads(auth, year: number) {
   ).join(" ");
   const q = `to:(${DOMAIN}) from:(${DOMAIN}) ${fromFilter} ${toFilter} ${subjectFilter} -{"invite.ics"} after:${year}/01/01 before:${year}/12/31`;
 
-  console.log(`Listing threads using the following query: ${q}`);
-  const res = await gmail.users.threads.list({
-    userId: "me",
-    q,
-    maxResults: 500,
-    includeSpamTrash: false,
-  });
+  console.log("Listing threads using the following query:", q);
+  let res = await getThreadsPage(gmail, q);
 
-  const threads = res.data.threads;
+  let threads = res.data.threads;
   if (!threads || threads.length === 0) {
     console.log("No threads found.");
     return;
   }
 
-  console.log(`Found ${threads.length} threads`);
+  while (res.data.nextPageToken) {
+    res = await getThreadsPage(gmail, q, res.data.nextPageToken);
+    threads = [...threads, ...res.data.threads];
+  }
+
+  console.log(`Found ${threads.length} total threads`);
   return threads.map((t) => new thread(t, gmail));
 }
 
@@ -378,6 +392,7 @@ async function buildEventStats(client) {
 
   // Get events for each year
   for (const year of YEARS) {
+    console.log("Getting events for", year);
     const yearEvents = await getEvents(client, year);
     if (!yearEvents) {
       continue;
@@ -386,7 +401,6 @@ async function buildEventStats(client) {
   }
 
   const rows = events.filter((e) => e.shouldInclude()).map((e) => e.toRow());
-  console.log(rows);
 
   // Write to CSV
   stringify(
@@ -402,30 +416,35 @@ async function buildEventStats(client) {
 }
 
 async function buildEmailStats(client) {
-  const threads = await getThreads(client, 2014);
+  let threads: thread[] = [];
 
-  if (threads) {
-    let threadsFiltered: thread[] = [];
-    for (const t of threads) {
-      const messages = await t.getMessages();
-      if (messages && messages.every((m) => m.shouldInclude())) {
-        threadsFiltered = [...threadsFiltered, t];
-      }
+  for (const year of YEARS) {
+    console.log("Getting emails for", year);
+    const yearThreads = await getThreads(client, year);
+    if (!yearThreads) {
+      continue;
     }
 
-    console.log(`Filtered to ${threadsFiltered.length} threads`);
-    let rows = threadsFiltered.map((t) => t.toRows()).flat();
-    stringify(
-      rows,
-      {
-        header: true,
-      },
-      function (err, output) {
-        console.log(output);
-        fs.writeFile(`${__dirname}/../messages.csv`, output);
+    for (const t of yearThreads) {
+      const messages = await t.getMessages();
+      if (messages && messages.every((m) => m.shouldInclude())) {
+        threads = [...threads, t];
       }
-    );
+    }
   }
+
+  console.log(`Filtered to ${threads.length} threads`);
+  const rows = threads.map((t) => t.toRows()).flat();
+  stringify(
+    rows,
+    {
+      header: true,
+    },
+    function (err, output) {
+      console.log(output);
+      fs.writeFile(`${__dirname}/../messages.csv`, output);
+    }
+  );
 }
 
 // The main event
