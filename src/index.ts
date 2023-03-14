@@ -33,11 +33,13 @@ const EXCLUDE_FROM = [
   `shop@${DOMAIN}`,
   `noreply@${DOMAIN}`,
   `enterprise@${DOMAIN}`,
+  `enterprise-test@${DOMAIN}`,
   `support@${DOMAIN}`,
 ];
 
 const EXCLUDE_TO = [
-  `@noreply${DOMAIN}`,
+  `@noreply.${DOMAIN}`,
+  `noreply@${DOMAIN}`,
   `halp-noreply@${DOMAIN}`,
   `@lists.${DOMAIN}`,
   `all@${DOMAIN}`,
@@ -255,7 +257,7 @@ class message {
 
   toRow() {
     return {
-      date: this.data.internalDate,
+      date: Date.parse(String(this.data.internalDate)).toString(),
       year: new Date(Number(this.data.internalDate)).getFullYear(),
       month: new Date(Number(this.data.internalDate)).getMonth() + 1,
       subject: this.subject(),
@@ -371,11 +373,36 @@ async function getThreads(auth, year: number) {
   return threads.map((t) => new thread(t, gmail));
 }
 
-// The main event
-async function run() {
-  const client = await authorize();
+async function buildEventStats(client) {
+  let events: event[] = [];
 
-  const threads = await getThreads(client, 2013);
+  // Get events for each year
+  for (const year of YEARS) {
+    const yearEvents = await getEvents(client, year);
+    if (!yearEvents) {
+      continue;
+    }
+    events = [...events, ...yearEvents];
+  }
+
+  const rows = events.filter((e) => e.shouldInclude()).map((e) => e.toRow());
+  console.log(rows);
+
+  // Write to CSV
+  stringify(
+    rows,
+    {
+      header: true,
+    },
+    function (err, output) {
+      console.log(output);
+      fs.writeFile(`${__dirname}/../events.csv`, output);
+    }
+  );
+}
+
+async function buildEmailStats(client) {
+  const threads = await getThreads(client, 2014);
 
   if (threads) {
     let threadsFiltered: thread[] = [];
@@ -399,33 +426,14 @@ async function run() {
       }
     );
   }
+}
 
-  /* 
-  let events: event[] = [];
+// The main event
+async function run() {
+  const client = await authorize();
 
-  // Get events for each year
-  for (const year of YEARS) {
-    const yearEvents = await getEvents(client, year);
-    if (!yearEvents) {
-      continue;
-    }
-    events = [...events, ...yearEvents];
-  }
-
-  const rows = events.filter((e) => e.shouldInclude()).map((e) => e.toRow());
-  console.log(rows);
-
-  // Write to CSV
-  stringify(
-    rows,
-    {
-      header: true,
-    },
-    function (err, output) {
-      console.log(output);
-      fs.writeFile(`${__dirname}/../data.csv`, output);
-    }
-  );*/
+  // await buildEventStats(client);
+  await buildEmailStats(client);
 }
 
 run();
