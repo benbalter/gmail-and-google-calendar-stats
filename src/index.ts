@@ -364,6 +364,7 @@ async function getThreadsPage(gmail, q, pageToken = null) {
 
 // Get all threads for the given year
 async function getThreads(auth, year: number) {
+  console.log("Getting threads for", year);
   const gmail = google.gmail({ version: "v1", auth });
   const fromFilter = EXCLUDE_FROM.map((email) => `-"from:${email}"`).join(" ");
   const toFilter = EXCLUDE_TO.map((email) => `-"to:${email}"`).join(" ");
@@ -396,7 +397,6 @@ async function buildEventStats(client) {
 
   // Get events for each year
   for (const year of YEARS) {
-    console.log("Getting events for", year);
     const yearEvents = await getEvents(client, year);
     if (!yearEvents) {
       continue;
@@ -425,7 +425,6 @@ async function buildEmailStats(client) {
 
   // Get threads for each year
   for (const year of YEARS) {
-    console.log("Getting threads for", year);
     const yearThreads = await getThreads(client, year);
     if (!yearThreads) {
       continue;
