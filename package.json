@@ -7,7 +7,7 @@
     "csv-stringify": "^6.3.0",
     "email-addresses": "^5.0.0",
     "eslint": "^8.36.0",
-    "eslint-plugin-github": "^4.3.7",
+    "eslint-plugin-github": "^6.0.0",
     "googleapis": "^182.0.0",
     "prettier": "2.8.8",
     "ts-node": "^10.9.1",
