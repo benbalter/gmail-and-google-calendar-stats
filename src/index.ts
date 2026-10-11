@@ -68,7 +68,7 @@ class event {
   // Returns an array of attendees' email domains
   attendeeDomains() {
     const attendeeDomains = this.attendeeEmails()?.map(
-      (email) => email?.split("@")[1]
+      (email) => email?.split("@")[1],
     );
     return [...new Set(attendeeDomains)];
   }
@@ -369,7 +369,7 @@ async function getThreads(auth, year: number) {
   const fromFilter = EXCLUDE_FROM.map((email) => `-"from:${email}"`).join(" ");
   const toFilter = EXCLUDE_TO.map((email) => `-"to:${email}"`).join(" ");
   const subjectFilter = EXCLUDE_SUBJECT.map(
-    (subject) => `-"subject:${subject}"`
+    (subject) => `-"subject:${subject}"`,
   ).join(" ");
   const q = `to:(${DOMAIN}) from:(${DOMAIN}) ${fromFilter} ${toFilter} ${subjectFilter} -{"invite.ics"} after:${year}/01/01 before:${year}/12/31`;
 
@@ -415,7 +415,7 @@ async function buildEventStats(client) {
     function (err, output) {
       console.log(output);
       fs.writeFile(`${__dirname}/../events.csv`, output);
-    }
+    },
   );
 }
 
@@ -450,7 +450,7 @@ async function buildEmailStats(client) {
     function (err, output) {
       console.log(output);
       fs.writeFile(`${__dirname}/../messages.csv`, output);
-    }
+    },
   );
 }
 
